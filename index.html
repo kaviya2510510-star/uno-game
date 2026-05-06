@@ -918,16 +918,20 @@ function renderActionPanel() {
   const title = document.getElementById('ap-title');
   const btns  = document.getElementById('ap-btns');
 
-  if (g.currentPlayer !== 0 || g.phase !== 'play') {
+  /* In local play, all players can play. In AI mode, only player 0 */
+  const isCurrentPlayerHuman = (g.isLocalGame || g.currentPlayer === 0);
+
+  if (!isCurrentPlayerHuman || g.phase !== 'play') {
     title.textContent = g.currentPlayer !== 0 ?
       `${g.players[g.currentPlayer].name} is thinking…` : 'Waiting…';
     btns.innerHTML = '';
     return;
   }
 
-  title.textContent = `Your turn, ${g.players[0].name}!`;
+  title.textContent = `${g.players[g.currentPlayer].name}'s turn!`;
+  const currentPlayerIdx = g.currentPlayer;
   const topC = g.discardPile[g.discardPile.length-1];
-  const hasPlay = g.players[0].hand.some(c => isValidPlay(c, topC, g.activeColor));
+  const hasPlay = g.players[currentPlayerIdx].hand.some(c => isValidPlay(c, topC, g.activeColor));
 
   btns.innerHTML = '';
 
@@ -1082,17 +1086,20 @@ function doPlayCard(g, playerIdx, cardIdx, chosenColor) {
    ================================================================ */
 function callUno(yes) {
   const g = G;
-  if (!g || g.currentPlayer !== 0 || g.phase !== 'uno-check') return;
+  if (!g || g.phase !== 'uno-check') return;
   
-  g.players[0].unoCalled = yes;
+  /* In local play, any player can call UNO. In AI mode, only player 0 */
+  if (!g.isLocalGame && g.currentPlayer !== 0) return;
+  
+  g.players[g.currentPlayer].unoCalled = yes;
   g.phase = 'play';
   updateUnoButtons();
 
   if (yes) {
     showUnoShout();
-    addLog(`${g.players[0].name} calls UNO!`, 'good');
+    addLog(`${g.players[g.currentPlayer].name} calls UNO!`, 'good');
   } else {
-    addLog(`${g.players[0].name} skipped UNO call – can be caught!`, 'bad');
+    addLog(`${g.players[g.currentPlayer].name} skipped UNO call – can be caught!`, 'bad');
   }
 
   /* Apply the card effect that was pending */
@@ -1390,15 +1397,16 @@ function updateUnoButtons() {
   }
 
   /* Show UNO button when current player has 1 card and hasn't called UNO yet */
-  const showUnoBut = (g.currentPlayer === 0 && 
-    g.players[0].hand.length === 1 && 
-    !g.players[0].unoCalled &&
-    g.phase === 'uno-check');
+  const showUnoBut = (g.players[g.currentPlayer].hand.length === 1 && 
+    !g.players[g.currentPlayer].unoCalled &&
+    g.phase === 'uno-check' &&
+    (g.isLocalGame || g.currentPlayer === 0)); /* Local play: any player. AI mode: only player 0 */
   
-  /* Show CAUGHT button when there's a valid catch target */
+  /* Show CAUGHT button when there's a valid catch target and it's current player's turn */
   const showCaughtBut = (g.currentPlayer === 0 && 
     g.catchTarget !== undefined && 
-    g.catchTarget >= 0);
+    g.catchTarget >= 0 &&
+    g.isLocalGame); /* Catch button only for local play */
 
   if (showUnoBut) {
     document.getElementById('uno-btn').classList.add('show');

@@ -1271,41 +1271,41 @@ let selectedGameMode = 'local'; /* 'local' or 'ai' */
 let isLocalGame = true;
 let showFirstTimeInstructions = true;
 
-/* Game mode selection */
-document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    selectedGameMode = btn.dataset.mode;
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('sel'));
-    btn.classList.add('sel');
+function setupEventListeners() {
+  /* Game mode selection */
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedGameMode = btn.dataset.mode;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      buildNameFields(); /* Update player name labels when mode changes */
+    });
   });
-});
 
-document.querySelectorAll('.npbtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    selectedNumPlayers = parseInt(btn.dataset.n);
-    document.querySelectorAll('.npbtn').forEach(b => b.classList.remove('sel'));
-    btn.classList.add('sel');
-    buildNameFields();
+  /* Number of players selection */
+  document.querySelectorAll('.npbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedNumPlayers = parseInt(btn.dataset.n);
+      document.querySelectorAll('.npbtn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      buildNameFields();
+    });
   });
-});
+}
 
 function buildNameFields() {
   const n   = selectedNumPlayers;
-  const def = isLocalGame() ? ['Player 1','Player 2','Player 3','Player 4'] : ['You','Bot A','Bot B','Bot C'];
+  const def = selectedGameMode === 'local' ? ['Player 1','Player 2','Player 3','Player 4'] : ['You','Bot A','Bot B','Bot C'];
   const container = document.getElementById('name-fields');
   container.innerHTML = '';
   for (let i = 0; i < n; i++) {
-    const label = isLocalGame() ? `Player ${i+1} Name` : (i===0?'Your Name':`Player ${i+1} Name (AI)`);
+    const label = selectedGameMode === 'local' ? `Player ${i+1} Name` : (i===0?'Your Name':`Player ${i+1} Name (AI)`);
     container.innerHTML += `
       <div class="setup-field">
         <label>${label}</label>
         <input type="text" id="pname-${i}" value="${def[i]}" maxlength="20">
       </div>`;
   }
-}
-
-function isLocalGame() {
-  return selectedGameMode === 'local';
 }
 
 function startGame() {
@@ -1374,6 +1374,7 @@ function hideLocalHandReview() {
 }
 
 buildNameFields(); /* init name fields on load */
+setupEventListeners(); /* attach button listeners */
 
 /* ================================================================
    UNO/CAUGHT BUTTON MANAGEMENT

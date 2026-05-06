@@ -1139,15 +1139,9 @@ function scheduleAI() {
   const g = G;
   if (!g) return;
   
-  /* For local games, show hand review instead of AI turn */
+  /* For local games, show hand review at start of each player's turn */
   if (g.isLocalGame) {
-    if (g.currentPlayer === 0) {
-      /* It's player 1's turn */
-      return;
-    } else {
-      /* Show next player's hand review */
-      showLocalHandReview();
-    }
+    showLocalHandReview();
     return;
   }
   
@@ -1346,8 +1340,7 @@ function showLocalHandReview() {
   const g = G;
   if (!g || !g.isLocalGame) return;
   
-  const currentPlayer = g.players[g.currentPlayerViewingHand];
-  const msg = `${currentPlayer.name}'s turn. Review your cards, then pass the device.`;
+  const currentPlayer = g.players[g.currentPlayer];
   
   /* Show overlay with current player's hand */
   document.getElementById('local-review-overlay').classList.remove('hidden');
@@ -1357,20 +1350,9 @@ function showLocalHandReview() {
 
 function hideLocalHandReview() {
   document.getElementById('local-review-overlay').classList.add('hidden');
-  /* Rotate to next player */
+  /* Now let the current player play their turn */
   const g = G;
-  g.currentPlayerViewingHand = (g.currentPlayerViewingHand + 1) % g.numPlayers;
   renderAll();
-  
-  if (g.currentPlayer === 0) {
-    /* It's the human player's turn */
-    return;
-  } else if (g.isLocalGame) {
-    /* Next local player, show review again */
-    showLocalHandReview();
-  } else {
-    scheduleAI();
-  }
 }
 
 buildNameFields(); /* init name fields on load */

@@ -850,8 +850,11 @@ function renderAll() {
     if (p.hand.length === 1) badges.push('<span class="pbadge uno">UNO!</span>');
 
     let handHtml = '';
-    if (isHuman) {
-      /* Show human player's cards - no playable/unplayable highlighting */
+    /* In local play, all players are "human". In AI mode, only player 0 is human */
+    const isPlayerHuman = G.isLocalGame || (i === 0);
+    
+    if (isPlayerHuman) {
+      /* Show player's cards - no playable/unplayable highlighting */
       const topC = g.discardPile[g.discardPile.length-1];
       p.hand.forEach((c, ci) => {
         const isSel   = ci === g.selectedCard;
@@ -866,7 +869,7 @@ function renderAll() {
         </div>`;
       });
     } else {
-      /* Show card backs for opponents */
+      /* Show card backs for opponents (AI mode only) */
       for (let k = 0; k < p.hand.length; k++)
         handHtml += renderCardBack('sz-sm');
     }
@@ -960,8 +963,19 @@ function renderActionPanel() {
    PLAYER ACTIONS (CONSTRAINT 8: validates all input)
    ================================================================ */
 function selectCard(idx) {
-  if (!G || G.currentPlayer !== 0 || G.phase !== 'play') return;
-  const c = G.players[0].hand[idx];
+  if (!G || G.phase !== 'play') return;
+  
+  /* In local play, any player can select cards. In AI mode, only player 0 */
+  if (!G.isLocalGame && G.currentPlayer !== 0) return;
+  if (G.isLocalGame && G.currentPlayer === 0) {
+    /* Local play - current player is human */
+  } else if (!G.isLocalGame && G.currentPlayer === 0) {
+    /* AI mode - only player 0 can play */
+  } else {
+    return;
+  }
+  
+  const c = G.players[G.currentPlayer].hand[idx];
   const top = G.discardPile[G.discardPile.length - 1];
 
   /* CONSTRAINT 8: Reject invalid selections */
@@ -977,26 +991,32 @@ function playSelectedCard() {
   if (!G || G.selectedCard < 0) return;
   const g = G;
   const idx = g.selectedCard;
-  const card = g.players[0].hand[idx];
+  const playerIdx = g.currentPlayer;
+  const card = g.players[playerIdx].hand[idx];
   g.selectedCard = -1;
 
   /* Wild cards need colour choice */
   if (card.type === TYPE.WILD || card.type === TYPE.WILD_DRAW_FOUR) {
-    g.pendingCard = { playerIdx: 0, cardIdx: idx };
+    g.pendingCard = { playerIdx: playerIdx, cardIdx: idx };
     g.phase = 'color-pick';
     document.getElementById('color-overlay').classList.remove('hidden');
     return;
   }
 
-  doPlayCard(g, 0, idx, card.color);
+  doPlayCard(g, playerIdx, idx, card.color);
 }
 
 function playerDrawCard() {
-  if (!G || G.currentPlayer !== 0 || G.phase !== 'play') return;
+  if (!G || G.phase !== 'play') return;
+  
+  /* In local play, any player can draw. In AI mode, only player 0 */
+  if (!G.isLocalGame && G.currentPlayer !== 0) return;
+  
   const g = G;
+  const playerIdx = g.currentPlayer;
   const drawn = drawFromDeck(g);
-  g.players[0].hand.push(drawn);
-  addLog(`You drew: ${COLOR_NAME[drawn.color]} ${drawn.type===TYPE.NUMBER?drawn.number:TKEY[drawn.type]}`, '');
+  g.players[playerIdx].hand.push(drawn);
+  addLog(`${g.players[playerIdx].name} drew a card`, '');
 
   const top = g.discardPile[g.discardPile.length - 1];
   if (isValidPlay(drawn, top, g.activeColor)) {

@@ -1055,7 +1055,8 @@ function doPlayCard(g, playerIdx, cardIdx, chosenColor) {
 
   /* CONSTRAINT 6: Check UNO */
   if (g.players[playerIdx].hand.length === 1) {
-    if (playerIdx === 0) {
+    /* In local play, any player needs to call UNO. In AI mode, only player 0 is human */
+    if (g.isLocalGame || playerIdx === 0) {
       /* Human player - show corner UNO button */
       g.phase = 'uno-check';
       renderAll();
@@ -1118,7 +1119,8 @@ function checkCatchPhase() {
   for (let i = 0; i < g.numPlayers; i++) {
     if (i === g.currentPlayer) continue;
     if (g.players[i].hand.length === 1 && !g.players[i].unoCalled) {
-      if (g.currentPlayer === 0) {
+      /* In local play, any player can catch. In AI mode, only player 0 */
+      if (g.isLocalGame || g.currentPlayer === 0) {
         /* Human can catch - show CAUGHT button */
         g.catchTarget = i;
         updateUnoButtons();

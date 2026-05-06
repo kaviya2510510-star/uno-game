@@ -9,7 +9,7 @@
 /* ── RESET & VARS ─────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a0f1a;
+  --bg:#FC6A03;
   --surf:#111827;
   --surf2:#1a2235;
   --bord:#1e2d45;
@@ -149,11 +149,9 @@ header{position:relative;z-index:20;display:flex;align-items:center;
 .card.yellow .cc{color:#111}
 .cc.br{top:auto!important;left:auto!important;bottom:3px;right:4px;transform:rotate(180deg)}
 
-/* playable highlight */
-.card.playable{box-shadow:0 0 0 2px #fff,0 0 18px rgba(255,255,255,.35)}
-.card.playable:hover{transform:translateY(-8px) scale(1.05);
-  box-shadow:0 10px 28px rgba(0,0,0,.6),0 0 0 2px #fff}
-.card.unplayable{filter:brightness(.45);cursor:not-allowed}
+/* card hover effect - no playable/unplayable highlighting */
+.card:hover{transform:translateY(-8px) scale(1.05);
+  box-shadow:0 10px 28px rgba(0,0,0,.6)}
 .card.selected{transform:translateY(-12px) scale(1.07);
   box-shadow:0 0 0 3px var(--accent),0 12px 30px rgba(255,61,90,.5)!important}
 
@@ -217,6 +215,7 @@ header{position:relative;z-index:20;display:flex;align-items:center;
   margin-bottom:14px;
   background:linear-gradient(90deg,var(--red-c),var(--yel-c));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.modal h3{font-size:.95rem;color:var(--accent);font-weight:800;margin-top:14px;margin-bottom:8px}
 .modal p,.modal li{font-size:.85rem;line-height:1.75;color:#8aa0be;margin-bottom:5px}
 .modal ul{padding-left:18px;margin-bottom:10px}
 .modal strong{color:var(--text)}
@@ -242,10 +241,10 @@ header{position:relative;z-index:20;display:flex;align-items:center;
   font-size:.88rem;width:100%;outline:none}
 .setup-field input:focus{border-color:var(--accent)}
 .num-pick{display:flex;gap:8px}
-.npbtn{flex:1;border:2px solid var(--bord2);border-radius:8px;background:var(--surf2);
+.npbtn,.mode-btn{flex:1;border:2px solid var(--bord2);border-radius:8px;background:var(--surf2);
   color:var(--text);font-family:var(--fdis);font-size:1.3rem;letter-spacing:2px;
   padding:10px;cursor:pointer;transition:all .15s}
-.npbtn:hover,.npbtn.sel{border-color:var(--accent);background:rgba(255,61,90,.15);color:var(--accent)}
+.npbtn:hover,.npbtn.sel,.mode-btn:hover,.mode-btn.sel{border-color:var(--accent);background:rgba(255,61,90,.15);color:var(--accent)}
 
 /* uno shout overlay */
 .uno-shout{position:fixed;inset:0;z-index:200;display:flex;
@@ -269,6 +268,17 @@ header{position:relative;z-index:20;display:flex;align-items:center;
   display:flex;gap:8px;align-items:center;flex-shrink:0}
 #action-bar span{font-size:.75rem;color:var(--muted)}
 
+/* Corner UNO/CAUGHT buttons */
+.corner-btn{position:fixed;bottom:20px;z-index:60;
+  border:none;border-radius:12px;font-family:var(--fdis);font-weight:900;
+  letter-spacing:2px;font-size:1rem;padding:12px 20px;cursor:pointer;
+  transition:all .2s;box-shadow:0 4px 12px rgba(0,0,0,.3);display:none}
+.corner-btn.show{display:block}
+.corner-btn:hover{transform:scale(1.05);box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.corner-btn:active{transform:scale(.98)}
+#uno-btn{right:20px;background:var(--green);color:#0a0f1a}
+#caught-btn{left:20px;background:var(--red-c);color:#fff}
+
 /* ── SCREEN: SETUP / GAME ────────────────────────────────── */
 #screen-setup{position:fixed;inset:0;z-index:50;
   display:flex;align-items:center;justify-content:center;
@@ -289,6 +299,14 @@ header{position:relative;z-index:20;display:flex;align-items:center;
     <p style="margin-bottom:18px;color:var(--muted)">Standard 108-card deck · 2–4 players · First to 500 pts</p>
 
     <div class="setup-field">
+      <label>Game Mode</label>
+      <div class="num-pick" id="game-mode-pick">
+        <button class="mode-btn sel" data-mode="local">Local Play</button>
+        <button class="mode-btn" data-mode="ai">vs AI</button>
+      </div>
+    </div>
+
+    <div class="setup-field">
       <label>Number of Players</label>
       <div class="num-pick" id="num-pick">
         <button class="npbtn sel" data-n="2">2</button>
@@ -303,7 +321,7 @@ header{position:relative;z-index:20;display:flex;align-items:center;
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
+<!-- ═══���══════════════════════════════════════════
      GAME SCREEN
 ══════════════════════════════════════════════ -->
 <div id="screen-game" class="hidden">
@@ -402,9 +420,73 @@ header{position:relative;z-index:20;display:flex;align-items:center;
   </div>
 </div>
 
+<!-- Local play hand review overlay -->
+<div class="overlay hidden" id="local-review-overlay">
+  <div class="modal" style="max-width:480px;text-align:center">
+    <h2 id="local-player-name">Player 1</h2>
+    <p style="margin-bottom:20px;font-size:1rem" id="local-player-cards"></p>
+    <p style="margin-bottom:20px;color:var(--muted)">Review your hand, then pass the device to the next player.</p>
+    <div class="modal-btns" style="justify-content:center">
+      <button class="btn primary" style="font-size:1rem;padding:12px 30px" onclick="hideLocalHandReview()">Next Player</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════
      OVERLAYS
 ══════════════════════════════════════════════ -->
+
+<!-- Corner UNO/CAUGHT buttons -->
+<button class="corner-btn" id="uno-btn" onclick="callUno(true)">UNO!</button>
+<button class="corner-btn" id="caught-btn" onclick="promptCatch()">CAUGHT!</button>
+
+<!-- Instructions overlay (first-time players) -->
+<div class="overlay hidden" id="instructions-overlay">
+  <div class="modal" style="max-width:520px">
+    <h2>How to Play UNO</h2>
+    <div style="max-height:60vh;overflow-y:auto">
+      <h3 style="font-size:1rem;color:var(--accent);margin-top:12px;margin-bottom:6px">🎯 Objective</h3>
+      <p>Be the first player to empty your hand by matching cards. The first player to reach 500 points wins!</p>
+      
+      <h3 style="font-size:1rem;color:var(--accent);margin-top:12px;margin-bottom:6px">🃏 Card Types</h3>
+      <ul>
+        <li><strong>Number Cards (0-9):</strong> Match by color or number</li>
+        <li><strong>Skip:</strong> Next player loses their turn</li>
+        <li><strong>Reverse:</strong> Reverse the direction of play</li>
+        <li><strong>Draw Two:</strong> Next player draws 2 cards and loses their turn</li>
+        <li><strong>Wild:</strong> Play on any card and choose the active color</li>
+        <li><strong>Wild Draw Four:</strong> Choose color and next player draws 4 cards and loses their turn</li>
+      </ul>
+
+      <h3 style="font-size:1rem;color:var(--accent);margin-top:12px;margin-bottom:6px">🎮 Gameplay</h3>
+      <ul>
+        <li>You start with 7 cards</li>
+        <li>On your turn, play a card that matches the top card in color, number, or type</li>
+        <li>If you can't play, click the draw deck to draw a card—you may play it immediately</li>
+        <li>When you play your second-to-last card, you have 1 card left</li>
+        <li><strong>Call UNO:</strong> Press the UNO button when you have 1 card left, or opponents can catch you for a +2 card penalty</li>
+        <li><strong>Catch:</strong> Press CAUGHT when an opponent forgets to call UNO with 1 card, giving them +2 penalty cards</li>
+      </ul>
+
+      <h3 style="font-size:1rem;color:var(--accent);margin-top:12px;margin-bottom:6px">📊 Scoring</h3>
+      <ul>
+        <li>Number cards: Face value (0-9 points)</li>
+        <li>Skip, Reverse, Draw Two: 20 points each</li>
+        <li>Wild, Wild Draw Four: 50 points each</li>
+      </ul>
+
+      <h3 style="font-size:1rem;color:var(--accent);margin-top:12px;margin-bottom:6px">⚠️ Important Rules</h3>
+      <ul>
+        <li>You cannot stack Draw Two or Wild Draw Four cards—they cannot be challenged</li>
+        <li>Action cards (Skip, Reverse, Draw Two) count as 20 points in scoring</li>
+        <li>If no valid cards remain in your hand and you must draw, you draw only 1 card</li>
+      </ul>
+    </div>
+    <div class="modal-btns" style="justify-content:center;margin-top:16px">
+      <button class="btn primary" onclick="hideInstructions()">Got it! Let&apos;s Play</button>
+    </div>
+  </div>
+</div>
 
 <!-- UNO shout animation -->
 <div class="uno-shout hidden" id="uno-shout"><span class="uno-word">UNO!</span></div>
@@ -769,14 +851,13 @@ function renderAll() {
 
     let handHtml = '';
     if (isHuman) {
-      /* Show human player's cards with playable highlights */
+      /* Show human player's cards - no playable/unplayable highlighting */
       const topC = g.discardPile[g.discardPile.length-1];
       p.hand.forEach((c, ci) => {
-        const canPlay = isMe && g.phase === 'play' && isValidPlay(c, topC, g.activeColor);
         const isSel   = ci === g.selectedCard;
-        let cls = canPlay ? 'playable' : 'unplayable';
+        let cls = '';
         if (isSel) cls = 'selected';
-        const onclick = canPlay ? `onclick="selectCard(${ci})"` : '';
+        const onclick = g.phase === 'play' ? `onclick="selectCard(${ci})"` : '';
         handHtml += `<div class="card ${cardColorClass(c)} sz-sm ${cls}" ${onclick}>
           <div class="cc">${cardVal(c)}</div>
           <div class="cv">${cardVal(c)}</div>
@@ -870,6 +951,9 @@ function renderActionPanel() {
       btns.appendChild(b);
     }
   }
+  
+  /* Update UNO/CAUGHT button visibility */
+  updateUnoButtons();
 }
 
 /* ================================================================
@@ -948,12 +1032,10 @@ function doPlayCard(g, playerIdx, cardIdx, chosenColor) {
   /* CONSTRAINT 6: Check UNO */
   if (g.players[playerIdx].hand.length === 1) {
     if (playerIdx === 0) {
-      /* Human player - ask to call UNO */
+      /* Human player - show corner UNO button */
       g.phase = 'uno-check';
       renderAll();
-      document.getElementById('uno-msg').textContent =
-        `${g.players[0].name}, you have 1 card left!`;
-      document.getElementById('uno-overlay').classList.remove('hidden');
+      updateUnoButtons();
       return;
     } else {
       /* AI always calls UNO */
@@ -979,10 +1061,12 @@ function doPlayCard(g, playerIdx, cardIdx, chosenColor) {
    CONSTRAINT 6: UNO call & catch penalty
    ================================================================ */
 function callUno(yes) {
-  document.getElementById('uno-overlay').classList.add('hidden');
   const g = G;
+  if (!g || g.currentPlayer !== 0 || g.phase !== 'uno-check') return;
+  
   g.players[0].unoCalled = yes;
   g.phase = 'play';
+  updateUnoButtons();
 
   if (yes) {
     showUnoShout();
@@ -1008,11 +1092,9 @@ function checkCatchPhase() {
     if (i === g.currentPlayer) continue;
     if (g.players[i].hand.length === 1 && !g.players[i].unoCalled) {
       if (g.currentPlayer === 0) {
-        /* Human can catch */
+        /* Human can catch - show CAUGHT button */
         g.catchTarget = i;
-        document.getElementById('catch-msg').textContent =
-          `${g.players[i].name} has 1 card and forgot to call UNO! Catch them for a 2-card penalty?`;
-        document.getElementById('catch-overlay').classList.remove('hidden');
+        updateUnoButtons();
         return;
       } else {
         /* AI randomly catches 70% of the time */
@@ -1027,11 +1109,17 @@ function checkCatchPhase() {
   scheduleAI();
 }
 
+function promptCatch() {
+  const g = G;
+  if (!g || g.catchTarget === undefined || g.catchTarget < 0) return;
+  catchPlayer(true);
+}
+
 function catchPlayer(yes) {
-  document.getElementById('catch-overlay').classList.add('hidden');
   const g = G;
   const target = g.catchTarget;
   g.catchTarget = -1;
+  updateUnoButtons();
 
   if (yes && g.players[target].hand.length === 1 && !g.players[target].unoCalled) {
     /* CONSTRAINT 6: 2-card penalty */
@@ -1049,7 +1137,22 @@ function catchPlayer(yes) {
    ================================================================ */
 function scheduleAI() {
   const g = G;
-  if (!g || g.currentPlayer === 0) return;
+  if (!g) return;
+  
+  /* For local games, show hand review instead of AI turn */
+  if (g.isLocalGame) {
+    if (g.currentPlayer === 0) {
+      /* It's player 1's turn */
+      return;
+    } else {
+      /* Show next player's hand review */
+      showLocalHandReview();
+    }
+    return;
+  }
+  
+  /* For AI games */
+  if (g.currentPlayer === 0) return;
   if (g.pendingAiDelay) clearTimeout(g.pendingAiDelay);
   g.pendingAiDelay = setTimeout(aiTurn, 900 + Math.random() * 600);
 }
@@ -1164,6 +1267,18 @@ function nextRoundOrEnd() {
    SETUP & GAME START
    ================================================================ */
 let selectedNumPlayers = 2;
+let selectedGameMode = 'local'; /* 'local' or 'ai' */
+let isLocalGame = true;
+let showFirstTimeInstructions = true;
+
+/* Game mode selection */
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedGameMode = btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+  });
+});
 
 document.querySelectorAll('.npbtn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1176,16 +1291,21 @@ document.querySelectorAll('.npbtn').forEach(btn => {
 
 function buildNameFields() {
   const n   = selectedNumPlayers;
-  const def = ['You','Bot A','Bot B','Bot C'];
+  const def = isLocalGame() ? ['Player 1','Player 2','Player 3','Player 4'] : ['You','Bot A','Bot B','Bot C'];
   const container = document.getElementById('name-fields');
   container.innerHTML = '';
   for (let i = 0; i < n; i++) {
+    const label = isLocalGame() ? `Player ${i+1} Name` : (i===0?'Your Name':`Player ${i+1} Name (AI)`);
     container.innerHTML += `
       <div class="setup-field">
-        <label>${i===0?'Your Name':`Player ${i+1} Name (AI)`}</label>
+        <label>${label}</label>
         <input type="text" id="pname-${i}" value="${def[i]}" maxlength="20">
       </div>`;
   }
+}
+
+function isLocalGame() {
+  return selectedGameMode === 'local';
 }
 
 function startGame() {
@@ -1196,6 +1316,8 @@ function startGame() {
   }
 
   G = newGameState(names);
+  G.isLocalGame = selectedGameMode === 'local';
+  G.currentPlayerViewingHand = 0; /* For local play hand review */
   dealHands(G);
 
   document.getElementById('screen-setup').classList.add('hidden');
@@ -1203,11 +1325,90 @@ function startGame() {
 
   addLog(`Game started! ${names.join(', ')}`, 'good');
   addLog(`─── Round 1 begins ───`, '');
+  
+  /* Show instructions on first play */
+  if (showFirstTimeInstructions) {
+    showInstructions();
+    showFirstTimeInstructions = false;
+  }
+  
   renderAll();
-  scheduleAI();
+  
+  /* For local play, show the current player's hand review screen */
+  if (G.isLocalGame) {
+    showLocalHandReview();
+  } else {
+    scheduleAI();
+  }
+}
+
+function showLocalHandReview() {
+  const g = G;
+  if (!g || !g.isLocalGame) return;
+  
+  const currentPlayer = g.players[g.currentPlayerViewingHand];
+  const msg = `${currentPlayer.name}'s turn. Review your cards, then pass the device.`;
+  
+  /* Show overlay with current player's hand */
+  document.getElementById('local-review-overlay').classList.remove('hidden');
+  document.getElementById('local-player-name').textContent = currentPlayer.name;
+  document.getElementById('local-player-cards').textContent = `(${currentPlayer.hand.length} cards)`;
+}
+
+function hideLocalHandReview() {
+  document.getElementById('local-review-overlay').classList.add('hidden');
+  /* Rotate to next player */
+  const g = G;
+  g.currentPlayerViewingHand = (g.currentPlayerViewingHand + 1) % g.numPlayers;
+  renderAll();
+  
+  if (g.currentPlayer === 0) {
+    /* It's the human player's turn */
+    return;
+  } else if (g.isLocalGame) {
+    /* Next local player, show review again */
+    showLocalHandReview();
+  } else {
+    scheduleAI();
+  }
 }
 
 buildNameFields(); /* init name fields on load */
+
+/* ================================================================
+   UNO/CAUGHT BUTTON MANAGEMENT
+   ================================================================ */
+function updateUnoButtons() {
+  const g = G;
+  if (!g) {
+    document.getElementById('uno-btn').classList.remove('show');
+    document.getElementById('caught-btn').classList.remove('show');
+    return;
+  }
+
+  /* Show UNO button when current player has 1 card and hasn't called UNO yet */
+  const showUnoBut = (g.currentPlayer === 0 && 
+    g.players[0].hand.length === 1 && 
+    !g.players[0].unoCalled &&
+    g.phase === 'uno-check');
+  
+  /* Show CAUGHT button when there's a valid catch target */
+  const showCaughtBut = (g.currentPlayer === 0 && 
+    g.catchTarget !== undefined && 
+    g.catchTarget >= 0);
+
+  if (showUnoBut) {
+    document.getElementById('uno-btn').classList.add('show');
+  } else {
+    document.getElementById('uno-btn').classList.remove('show');
+  }
+
+  if (showCaughtBut) {
+    document.getElementById('caught-btn').classList.add('show');
+  } else {
+    document.getElementById('caught-btn').classList.remove('show');
+  }
+}
 
 /* ================================================================
    UNO SHOUT ANIMATION
@@ -1223,6 +1424,8 @@ function showUnoShout() {
    ================================================================ */
 function showRules()   { document.getElementById('rules-overlay').classList.remove('hidden') }
 function hideRules()   { document.getElementById('rules-overlay').classList.add('hidden') }
+function showInstructions() { document.getElementById('instructions-overlay').classList.remove('hidden') }
+function hideInstructions() { document.getElementById('instructions-overlay').classList.add('hidden') }
 function confirmNewGame() {
   if (confirm('Start a new game?')) {
     G = null;
